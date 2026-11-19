@@ -1,0 +1,1699 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Action Cures Anxiety</title>
+<meta name="description" content="Scribble a worry in oil pastel, give it legs, and watch it wander off.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Averia+Serif+Libre:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#161412;
+    --paper:#fdfcf9;
+    --kraft:#c99b62;
+    --kraft-dark:#9c7140;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--paper);font-family:Inter,system-ui,-apple-system,sans-serif;color:var(--ink);
+    -webkit-user-select:none;user-select:none;touch-action:none;overscroll-behavior:none}
+  #c{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:none}
+  body.panning #c{cursor:grab}
+  body.panning.dragging #c{cursor:grabbing}
+  #cursor{position:fixed;left:0;top:0;border-radius:50%;pointer-events:none;border:1.5px solid var(--ink);
+    transform:translate(-50%,-50%);opacity:.55;transition:width .15s,height .15s,opacity .2s}
+  body.panning #cursor{opacity:0!important}
+
+  .head{position:fixed;left:30px;top:24px;pointer-events:none}
+  .head h1{margin:0;font-family:"Averia Serif Libre",Georgia,serif;font-weight:700;font-size:40px;line-height:1.1;letter-spacing:-.2px;white-space:nowrap;color:#6f9488}
+  .head .sub{margin:10px 0 0;font-weight:400;font-size:16px;line-height:1.45;color:#4c5a55;max-width:340px}
+  .head .hint{margin:10px 0 0;font-size:13px;line-height:1.45;color:#4c5a55;opacity:.6;max-width:340px;transition:opacity .5s}
+
+  /* ---------- tray ---------- */
+  .tray{position:fixed;left:50%;bottom:0;transform:translateX(-50%);display:flex;align-items:flex-end;gap:24px;padding:0 18px;pointer-events:none}
+  .box{position:relative;display:flex;gap:5px;padding:0 14px;height:150px;align-items:flex-end;pointer-events:auto}
+  .box::after{content:"";position:absolute;left:0;right:0;bottom:0;height:60px;border-radius:6px 6px 0 0;
+    background:
+      repeating-linear-gradient(90deg,rgba(0,0,0,.035) 0 2px,transparent 2px 5px),
+      linear-gradient(180deg,#d6aa70,var(--kraft) 40%,var(--kraft-dark));
+    box-shadow:0 -1px 0 rgba(255,255,255,.35) inset,0 -6px 18px rgba(0,0,0,.12);z-index:2;pointer-events:none}
+  .box .label{position:absolute;left:0;right:0;bottom:17px;text-align:center;z-index:3;font-size:14px;font-weight:500;color:#3a2610;opacity:.8;pointer-events:none;letter-spacing:.5px}
+  .crayon{--c:#d6282f;--r:0deg;position:relative;width:34px;height:150px;border:0;padding:0;background:none;cursor:pointer;
+    transform:translateY(30px) rotate(var(--r));transition:transform .35s cubic-bezier(.3,1.6,.5,1);z-index:1;outline:none}
+  .crayon:hover{transform:translateY(18px) rotate(var(--r))}
+  .crayon.sel{transform:translateY(-14px) rotate(var(--r))}
+  .crayon:focus-visible svg{outline:2px dashed var(--ink);outline-offset:3px;border-radius:4px}
+  .crayon svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(1px 2px 1.5px rgba(40,25,10,.35))}
+  .crayon .tip,.crayon .stick{position:absolute;left:4px;right:4px;
+    background:
+      linear-gradient(90deg,rgba(0,0,0,.32),rgba(255,255,255,.22) 28%,rgba(255,255,255,.06) 44%,rgba(0,0,0,.1) 72%,rgba(0,0,0,.38)),
+      var(--grit),var(--c);background-blend-mode:normal,multiply,normal}
+  .crayon .tip{top:0;height:26px;clip-path:polygon(4% 100%,12% 38%,30% 12%,58% 2%,84% 14%,94% 46%,96% 100%)}
+  .crayon .stick{top:24px;bottom:0;border-radius:2px}
+  .crayon .wrap{position:absolute;left:2px;right:2px;top:54px;bottom:0;border-radius:2px;
+    background:linear-gradient(90deg,rgba(0,0,0,.18),rgba(255,255,255,.4) 30%,rgba(0,0,0,0) 50%,rgba(0,0,0,.2)),#efe6d4;
+    display:flex;align-items:flex-start;justify-content:center;padding-top:8px}
+  .crayon .wrap span{writing-mode:vertical-rl;transform:rotate(180deg);font-size:12px;color:var(--c);filter:brightness(.8)}
+  .crayon .wrap::before{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:var(--c);opacity:.9}
+
+  .tools{display:flex;flex-direction:column;gap:10px;padding-bottom:20px;pointer-events:auto;align-items:flex-start}
+  .sizes{display:flex;gap:6px;align-items:center;background:rgba(255,255,255,.55);border-radius:30px;padding:6px 10px;border:1.5px solid rgba(0,0,0,.12)}
+  .size{width:34px;height:34px;border-radius:50%;border:0;background:none;cursor:pointer;display:grid;place-items:center}
+  .size i{display:block;border-radius:50%;background:var(--ink);opacity:.35;transition:opacity .2s}
+  .size.sel i{opacity:1}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{font-family:inherit;font-size:17px;border:2px solid var(--ink);background:var(--paper);color:var(--ink);border-radius:14px 10px 15px 9px;
+    padding:6px 13px;cursor:pointer;box-shadow:2px 3px 0 var(--ink);transition:transform .12s,box-shadow .12s}
+  .btn:hover{transform:translate(-1px,-1px);box-shadow:3px 4px 0 var(--ink)}
+  .btn:active{transform:translate(2px,3px);box-shadow:0 0 0 var(--ink)}
+  .btn.go{font-size:20px;font-weight:600;padding:8px 18px;background:#ffe06a}
+  .btn:disabled{opacity:.35;cursor:default;transform:none;box-shadow:2px 3px 0 var(--ink)}
+  .btn:focus-visible{outline:2px dashed var(--ink);outline-offset:3px}
+
+  .music{position:fixed;top:22px;right:24px;display:flex;align-items:center;gap:8px;font-family:inherit;font-size:13px;font-weight:500;
+    color:#4c5a55;background:rgba(255,255,255,.7);border:1.5px solid rgba(76,90,85,.25);border-radius:999px;padding:7px 14px 7px 11px;cursor:pointer;
+    transition:background .2s,border-color .2s}
+  .music:hover{background:#fff;border-color:rgba(76,90,85,.45)}
+  .music:focus-visible{outline:2px dashed #6f9488;outline-offset:3px}
+  .music svg{width:16px;height:16px;flex:none}
+  .music .wave{transition:opacity .25s}
+  .music[aria-pressed="false"] .wave{opacity:0}
+  .music[aria-pressed="true"] .mute{display:none}
+  .music[aria-pressed="false"] .mute{display:inline}
+  @media (max-width:860px){
+    .head{left:16px;top:14px;right:16px}
+    .head h1{font-size:24px;white-space:normal}
+    .head .sub{font-size:14px;margin-top:6px}
+    .head .hint{display:none}
+    .tray{gap:8px;padding:0 6px;width:100%;justify-content:center}
+    .box{padding:0 6px;gap:2px;height:120px}
+    .box .label{font-size:13px}
+    .crayon{width:24px;height:120px}
+    .crayon .wrap span{display:none}
+    .btn{font-size:14px;padding:4px 9px}
+    .btn.go{font-size:17px;padding:6px 10px}
+    .size{width:26px;height:26px}
+  }
+  @media (prefers-reduced-motion:reduce){.crayon{transition:none}}
+</style>
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+<canvas id="c" aria-label="Endless drawing paper"></canvas>
+<div id="cursor"></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="cyl" x1="0" x2="1">
+      <stop offset="0" stop-color="#000" stop-opacity=".5"/>
+      <stop offset=".1" stop-color="#000" stop-opacity=".18"/>
+      <stop offset=".27" stop-color="#fff" stop-opacity=".32"/>
+      <stop offset=".36" stop-color="#fff" stop-opacity=".12"/>
+      <stop offset=".55" stop-color="#fff" stop-opacity="0"/>
+      <stop offset=".8" stop-color="#000" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".55"/>
+    </linearGradient>
+    <linearGradient id="face" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".38"/>
+      <stop offset=".6" stop-color="#fff" stop-opacity=".08"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".18"/>
+    </linearGradient>
+    <pattern id="ridges" width="2.6" height="10" patternUnits="userSpaceOnUse">
+      <rect width=".9" height="10" fill="#5a4630" opacity=".09"/>
+    </pattern>
+    <filter id="wax" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="1.15" numOctaves="3" seed="7" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -2.6 0 0 0 1.1" result="dark"/>
+      <feComposite in="dark" in2="SourceAlpha" operator="in" result="darkIn"/>
+      <feComponentTransfer in="darkIn" result="darkSoft"><feFuncA type="linear" slope=".35"/></feComponentTransfer>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  3 0 0 0 -1.95" result="lite"/>
+      <feComposite in="lite" in2="SourceAlpha" operator="in" result="liteIn"/>
+      <feComponentTransfer in="liteIn" result="liteSoft"><feFuncA type="linear" slope=".45"/></feComponentTransfer>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="darkSoft"/><feMergeNode in="liteSoft"/></feMerge>
+    </filter>
+    <filter id="paperf" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency=".7 .08" numOctaves="2" seed="2" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 .35  0 0 0 0 .27  0 0 0 0 .18  -1.4 0 0 0 .75" result="fib"/>
+      <feComposite in="fib" in2="SourceAlpha" operator="in" result="fibIn"/>
+      <feComponentTransfer in="fibIn" result="fibSoft"><feFuncA type="linear" slope=".25"/></feComponentTransfer>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="fibSoft"/></feMerge>
+    </filter>
+  </defs>
+</svg>
+
+<button class="music" id="musicBtn" aria-pressed="true" title="Background music (M)">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/>
+    <path class="wave" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>
+    <path class="mute" d="M16 9.5l5 5M21 9.5l-5 5" style="display:none"/>
+  </svg>
+  <span id="musicLabel">music on</span>
+</button>
+<header class="head">
+  <h1>action cures anxiety.</h1>
+  <p class="sub">Scribble the worry into a shape. Give it legs. Watch it wander off.</p>
+  <p class="hint" id="hint">Scroll or hold space and drag to roam the paper. Click a monster to poke it.</p>
+</header>
+
+<div class="tray">
+  <div class="box" id="box" role="radiogroup" aria-label="Oil pastels">
+    <div class="label">oil pastels</div>
+  </div>
+  <div class="tools">
+    <div class="sizes" role="radiogroup" aria-label="Stroke size">
+      <button class="size" data-r="7"  aria-label="Thin"><i style="width:7px;height:7px"></i></button>
+      <button class="size sel" data-r="13" aria-label="Medium"><i style="width:13px;height:13px"></i></button>
+      <button class="size" data-r="22" aria-label="Fat"><i style="width:21px;height:21px"></i></button>
+    </div>
+    <div class="row">
+      <button class="btn" id="clearBtn" title="Clear (C)">clear</button>
+      <button class="btn" id="findBtn" title="Find a monster (F)" disabled>find one</button>
+    </div>
+    <button class="btn go" id="lifeBtn" disabled title="Bring to life (Enter)">bring it to life!</button>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+
+/* ================================================================
+   Config
+   ================================================================ */
+const CRAYONS = [
+  { name: 'red',    hex: '#e86b74', r: '-4deg', mood: 'hot' },
+  { name: 'orange', hex: '#f5a467', r: '2deg',  mood: 'sunny' },
+  { name: 'yellow', hex: '#f6d672', r: '-1deg', mood: 'sunny' },
+  { name: 'green',  hex: '#7fc493', r: '3deg',  mood: 'sporty' },
+  { name: 'blue',   hex: '#74a0e0', r: '-2deg', mood: 'calm' },
+  { name: 'purple', hex: '#a990d8', r: '1deg',  mood: 'calm' },
+  { name: 'pink',   hex: '#f4a7c6', r: '-3deg', mood: 'sweet' },
+  { name: 'brown',  hex: '#b08766', r: '2deg',  mood: 'calm' },
+  { name: 'black',  hex: '#55504e', r: '-1deg', mood: 'cool' },
+];
+const MAX_SEG = 32;
+const MAX_MONSTERS = 24;
+const TILE = 512;      // css px per pigment tile
+const PER = 1024;      // css px period of the tiling paper texture
+const PAD = 8;         // css px overlap baked around each tile so edges shade seamlessly
+const TS = TILE + PAD * 2;
+
+const hexToVec3 = (h) => {
+  const n = parseInt(h.slice(1), 16);
+  return new THREE.Vector3(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
+};
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const rand = (a, b) => a + Math.random() * (b - a);
+const smooth = (e) => e * e * (3 - 2 * e);
+const easeOutBack = (t) => { const c1 = 1.7, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
+
+/* ================================================================
+   GLSL
+   ================================================================ */
+const NOISE = /* glsl */`
+float hash(vec2 p){ vec3 p3=fract(vec3(p.xyx)*.1031); p3+=dot(p3,p3.yzx+33.33); return fract((p3.x+p3.y)*p3.z); }
+float vnoise(vec2 p){ vec2 i=floor(p), f=fract(p); vec2 u=f*f*(3.-2.*f);
+  return mix(mix(hash(i),hash(i+vec2(1.,0.)),u.x), mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),u.x), u.y); }
+`;
+
+/* Periodic noise so the paper texture tiles seamlessly across an endless sheet */
+const PNOISE = /* glsl */`
+float hashP(vec2 i, vec2 per){ return hash(mod(i, per)); }
+float vnoiseP(vec2 p, vec2 per){ vec2 i=floor(p), f=fract(p); vec2 u=f*f*(3.-2.*f);
+  return mix(mix(hashP(i,per),hashP(i+vec2(1.,0.),per),u.x), mix(hashP(i+vec2(0.,1.),per),hashP(i+vec2(1.,1.),per),u.x), u.y); }
+float fbmP(vec2 p, vec2 per){ float s=0., a=.5; for(int i=0;i<5;i++){ s+=a*vnoiseP(p,per); p=p*2.+vec2(17.,9.); per*=2.; a*=.5; } return s; }
+`;
+
+/* Kubelka–Munk-ish pigment mixing: yellow + blue -> green, like real wax pigment */
+const PIGMENT = /* glsl */`
+vec3 toK(vec3 c){ c=clamp(c,0.03,1.); return (1.-c)*(1.-c)/(2.*c); }
+vec3 fromK(vec3 k){ return 1.+k-sqrt(k*k+2.*k); }
+float depAt(float s, float tooth, float aN){
+  float hEff = max(tooth, aN*0.9);            // wax fills the paper's valleys
+  return smoothstep(0., .22, s*.62 + hEff - .73) * smoothstep(0., .12, s);
+}
+vec4 applyStroke(vec4 o, float s, float crumb, float tooth, float aN, vec3 col){
+  float dep = max(depAt(s, tooth, aN), crumb);
+  if(dep < .002) return o;
+  vec3 base = o.a > .01 ? o.rgb : col;
+  o.rgb = fromK(mix(toK(base), toK(col), clamp(dep*.8, 0., 1.)));
+  o.a = min(1.4, o.a + dep*.25);
+  return o;
+}
+vec3 litPastel(vec4 o, vec3 N, float cov, float grain, vec3 paperCol, out float spec){
+  vec3 L = normalize(vec3(-.45,.55,.7));
+  vec3 Hv = normalize(L + vec3(0.,0.,1.));
+  float diff = 1. + .65*(dot(N,L) - L.z);
+  spec = pow(max(dot(N,Hv),0.), 38.) * .32 * cov * smoothstep(.06,.5,o.a);
+  vec3 pc = o.rgb * (.93 + .12*grain);
+  return mix(paperCol, pc, cov) * diff;
+}
+`;
+
+const FS_VERT = /* glsl */`varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.,1.); }`;
+const WORLD_VERT = /* glsl */`varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`;
+
+/* Seamless paper tooth tile: R = height, G = fibres, B = large-scale tone */
+const PAPER_FRAG = /* glsl */`
+uniform float uPer; varying vec2 vUv;
+${NOISE}
+${PNOISE}
+void main(){
+  vec2 p = vUv * uPer;                      // css px inside the tile
+  float L = uPer;
+  float g = fbmP(p*(430./1024.), vec2(L*430./1024.))*.55 + fbmP(p*(113./1024.)+3., vec2(L*113./1024.))*.3
+          + hashP(floor(p*1.25), vec2(L*1.25))*.15;
+  float f1 = vnoiseP(vec2(p.x*(36./1024.), p.y*(922./1024.)), vec2(L*36./1024., L*922./1024.));
+  float f2 = vnoiseP(vec2(p.x*(819./1024.), p.y*(41./1024.))+40., vec2(L*819./1024., L*41./1024.));
+  float fib = smoothstep(.72,.96,max(f1,f2));
+  float h = smoothstep(.3,.66,g) + fib*.1;
+  float tone = fbmP(p*(4./1024.), vec2(4.));
+  gl_FragColor = vec4(clamp(h,0.,1.), fib, tone, 1.);
+}`;
+
+/* Stroke stamp (screen space): max-blended pressure field for the stroke in progress */
+const STAMP_FRAG = /* glsl */`
+uniform vec4 uSeg[${MAX_SEG}]; uniform float uPress[${MAX_SEG}]; uniform int uCount;
+uniform float uRadius, uSeed, uDpr;
+${NOISE}
+void main(){
+  vec2 p = gl_FragCoord.xy / uDpr;
+  float best = 0., crumb = 0.;
+  for(int i=0;i<${MAX_SEG};i++){
+    if(i >= uCount) break;
+    vec2 a = uSeg[i].xy, b = uSeg[i].zw, ab = b-a;
+    float L2 = dot(ab,ab);
+    float t = L2 > 1e-4 ? clamp(dot(p-a,ab)/L2, 0., 1.) : 0.;
+    float d = length(p - a - ab*t);
+    float r = uRadius;
+    if(d > r*1.8) continue;
+    vec2 dir = L2 > 1e-4 ? ab*inversesqrt(L2) : vec2(1.,0.);
+    vec2 q = vec2(dot(p,dir), dot(p,vec2(-dir.y,dir.x)));
+    float rag = vnoise(p*.15 + uSeed)*.5 + vnoise(p*.5 + uSeed*3.)*.25;
+    float edge = 1. - smoothstep(r*(.42+rag*.35), r*(.88+rag*.26), d);
+    float streak = vnoise(vec2(q.x*.03, q.y*.8) + uSeed);
+    best = max(best, uPress[i]*edge*(.72 + .5*streak));
+    float cr = step(.982, hash(floor(p*.8) + uSeed)) * (1. - smoothstep(r*.9, r*1.75, d));
+    crumb = max(crumb, cr*uPress[i]);
+  }
+  gl_FragColor = vec4(best, crumb, 0., 1.);
+}`;
+
+/* Bake the finished screen-space stroke into one world tile */
+const BAKE_FRAG = /* glsl */`
+uniform sampler2D uBase, uStroke, uPaper;
+uniform vec2 uOrigin, uCam, uScreenCss; uniform float uTile, uPer; uniform vec3 uColor;
+varying vec2 vUv;
+${PIGMENT}
+float aN(vec2 uv){ float o = 1.5/uTile;
+  return (texture2D(uBase,uv).a + texture2D(uBase,uv+vec2(o,0.)).a + texture2D(uBase,uv-vec2(o,0.)).a
+  + texture2D(uBase,uv+vec2(0.,o)).a + texture2D(uBase,uv-vec2(0.,o)).a) * .2; }
+void main(){
+  vec2 w = uOrigin + vUv*uTile;
+  vec2 suv = (w - uCam) / uScreenCss;
+  vec2 s = (suv.x < 0. || suv.y < 0. || suv.x > 1. || suv.y > 1.) ? vec2(0.) : texture2D(uStroke, suv).rg;
+  vec4 o = texture2D(uBase, vUv);
+  gl_FragColor = applyStroke(o, s.r, s.g, texture2D(uPaper, w/uPer).r, aN(vUv), uColor);
+}`;
+
+/* Paper + one tile of pigment + live stroke, lit as a height field (world space) */
+const DISPLAY_FRAG = /* glsl */`
+uniform sampler2D uBase, uStroke, uPaper;
+uniform vec2 uCam, uScreenPx, uOrigin; uniform float uDpr, uTile, uPer; uniform vec3 uColor;
+${NOISE}
+${PIGMENT}
+vec2 W(vec2 fc){ return uCam + fc/uDpr; }
+vec4 baseAt(vec2 w){ return texture2D(uBase, (w-uOrigin)/uTile); }
+float aN(vec2 w){ return (baseAt(w).a + baseAt(w+vec2(1.5,0.)).a + baseAt(w-vec2(1.5,0.)).a + baseAt(w+vec2(0.,1.5)).a + baseAt(w-vec2(0.,1.5)).a)*.2; }
+float hAt(vec2 fc){
+  vec2 w = W(fc);
+  float t = texture2D(uPaper, w/uPer).r; float a = baseAt(w).a; float s = texture2D(uStroke, fc/uScreenPx).r;
+  return t*.11 + .8*(a + .25*depAt(s,t,a));
+}
+void main(){
+  vec2 fc = gl_FragCoord.xy;
+  vec2 w = W(fc);
+  vec4 pap = texture2D(uPaper, w/uPer);
+  vec4 o = baseAt(w);
+  vec2 s = texture2D(uStroke, fc/uScreenPx).rg;
+  o = applyStroke(o, s.r, s.g, pap.r, aN(w), uColor);
+  float hx = hAt(fc+vec2(1.,0.)) - hAt(fc-vec2(1.,0.));
+  float hy = hAt(fc+vec2(0.,1.)) - hAt(fc-vec2(0.,1.));
+  vec3 N = normalize(vec3(-hx*2.2, -hy*2.2, 1.));
+  float cov = smoothstep(0., .1, o.a);
+  vec3 paperCol = vec3(.998,.996,.99) * (.985 + .015*pap.r) - pap.g*.012 + (pap.b-.5)*.014;
+  float spec;
+  vec3 col = litPastel(o, N, cov, hash(floor(w*1.4)), paperCol, spec) + spec;
+  vec2 v = fc/uScreenPx - .5; col *= 1. - dot(v,v)*.05;
+  gl_FragColor = vec4(col, 1.);
+}`;
+
+const COPY_FRAG = /* glsl */`uniform sampler2D uSrc; varying vec2 vUv; void main(){ gl_FragColor = texture2D(uSrc, vUv); }`;
+
+const MASK_FRAG = /* glsl */`
+uniform sampler2D uSrc; varying vec2 vUv;
+void main(){ float m=0.; vec2 cell=floor(vUv*64.);
+  for(int i=0;i<4;i++) for(int j=0;j<4;j++){ m=max(m, texture2D(uSrc,(cell+(vec2(float(i),float(j))+.5)/4.)/64.).a); }
+  gl_FragColor = vec4(m*6.); }`;
+
+/* Monster body: lifted pigment, squash/stretch + hand-drawn "boil" */
+const BODY_VERT = /* glsl */`
+uniform float uTime, uSquash, uLean, uWob; uniform vec2 uSize;
+uniform vec4 uLimb[6];   // pivot.xy, direction.xy of each drawn limb
+uniform vec3 uLimbP[6];  // length, angle, lift
+varying vec2 vUv;
+// rotate the pastel that forms a drawn limb about its joint, fading in along the limb so it bends
+vec2 limbBend(vec2 p, vec4 A, vec3 P){
+  vec2 v = p - A.xy;
+  float len = P.x;
+  float along = dot(v, A.zw);
+  float across = abs(A.z*v.y - A.w*v.x);
+  float w = smoothstep(0., len*.15, along) * (1. - smoothstep(len*.5, len*.9, across));
+  float a = P.y*w, c = cos(a), s = sin(a);
+  return A.xy + vec2(c*v.x - s*v.y, s*v.x + c*v.y) + vec2(0., P.z*w);
+}
+void main(){
+  vUv = uv; vec3 p = position;
+  for(int i=0;i<6;i++){ if(uLimbP[i].x > 0.) p.xy = limbBend(p.xy, uLimb[i], uLimbP[i]); }
+  float yn = p.y/uSize.y + .5;
+  p.y = (p.y + uSize.y*.5)*uSquash - uSize.y*.5;
+  p.x = p.x*(1. + (1.-uSquash)*.8) + uLean*yn*uSize.y*.25 + sin(uTime*5. + yn*3.)*uWob*yn;
+  p.y += sin(uTime*4. + p.x*.03)*uWob*.4;
+  gl_Position = projectionMatrix*modelViewMatrix*vec4(p,1.);
+}`;
+const BODY_FRAG = /* glsl */`
+uniform sampler2D uPig, uPaper; uniform vec2 uTexel, uPapOff, uPapScale, uSizeCss; uniform float uTime, uBoil, uAlpha;
+varying vec2 vUv;
+${NOISE}
+${PIGMENT}
+float hAt(vec2 uv){ return texture2D(uPaper, uPapOff+uv*uPapScale).r*.11 + .8*texture2D(uPig,uv).a; }
+void main(){
+  float f = floor(uTime*7.);
+  vec2 j = (vec2(hash(vec2(f,1.3)), hash(vec2(f,7.1))) - .5) * uTexel * 2.5 * uBoil;
+  vec2 w = (vec2(vnoise(vUv*4.+f*1.7), vnoise(vUv*4.+f*2.3+9.)) - .5) * .01 * uBoil;
+  vec2 uv = vUv + j + w;
+  vec4 o = texture2D(uPig, uv);
+  float hx = hAt(uv+vec2(uTexel.x,0.)) - hAt(uv-vec2(uTexel.x,0.));
+  float hy = hAt(uv+vec2(0.,uTexel.y)) - hAt(uv-vec2(0.,uTexel.y));
+  vec3 N = normalize(vec3(-hx*2.2, -hy*2.2, 1.));
+  float cov = smoothstep(0., .1, o.a);
+  if(cov < .01) discard;
+  float spec;
+  vec3 col = litPastel(o, N, 1., hash(floor(uv*uSizeCss*1.4)), vec3(1.), spec) + spec;
+  gl_FragColor = vec4(col, cov*uAlpha);
+}`;
+
+/* Pastel line for limbs / mouth: grain travels with the limb */
+const LINE_FRAG = /* glsl */`
+uniform vec3 uColor; uniform sampler2D uPaper; uniform float uPer, uSeed, uWidth, uAlpha;
+varying vec2 vUv;
+${NOISE}
+void main(){
+  vec2 pp = vec2(vUv.x + uSeed*137., vUv.y*uWidth*.5 + uSeed*71.);
+  float tooth = texture2D(uPaper, pp/uPer).r;
+  float rag = vnoise(vec2(vUv.x*.25, uSeed))*.35;
+  float edge = 1. - smoothstep(.5 - rag*.4, 1. - rag*.25, abs(vUv.y));
+  float streak = vnoise(vec2(vUv.x*.05, vUv.y*2.6 + uSeed));
+  float press = edge*(.8 + .45*streak);
+  float dep = smoothstep(0., .22, press*.62 + tooth - .7);
+  if(dep < .02) discard;
+  vec3 c = uColor * (.92 + .12*hash(floor(pp*1.4)));
+  c *= 1. + .1*vUv.y;
+  gl_FragColor = vec4(c, dep*uAlpha);
+}`;
+
+/* Googly marker eye */
+const EYE_FRAG = /* glsl */`
+uniform vec2 uLook; uniform float uOpen, uSeed, uAlpha, uHappy; varying vec2 vUv;
+${NOISE}
+void main(){
+  vec2 q = vUv*2. - 1.;
+  if(uOpen < .18){
+    float y0 = uHappy > .5 ? (.2 - q.x*q.x*.45) : (-.1 + q.x*q.x*.25);
+    float d = abs(q.y - y0);
+    float a = (1. - smoothstep(.09,.16,d)) * (1. - smoothstep(.8,.95,abs(q.x)));
+    if(a < .01) discard;
+    gl_FragColor = vec4(vec3(.07), a*uAlpha); return;
+  }
+  vec2 e = vec2(q.x, q.y/uOpen);
+  float ang = atan(e.y, e.x);
+  float r = length(e) + (vnoise(vec2(ang*1.6 + uSeed, uSeed)) - .5)*.07;
+  float aa = fwidth(r) + .01;
+  float outer = 1. - smoothstep(.93-aa, .93+aa, r);
+  if(outer < .01) discard;
+  float ring = smoothstep(.75-aa, .75+aa, r);
+  vec2 pc = uLook*.3;
+  float pupil = 1. - smoothstep(.33-aa, .33+aa, length(e - pc));
+  vec3 col = mix(vec3(.995,.99,.97), vec3(.06), max(ring, pupil));
+  float hl = 1. - smoothstep(.07, .1, length(e - pc - vec2(-.11,.12)));
+  col = mix(col, vec3(1.), hl*pupil);
+  gl_FragColor = vec4(col, outer*uAlpha);
+}`;
+
+/* ================================================================
+   Renderer / targets
+   ================================================================ */
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, premultipliedAlpha: false });
+renderer.autoClear = false;
+
+let W = innerWidth, H = innerHeight, DPR = Math.min(devicePixelRatio || 1, 2);
+let camX = -W / 2, camY = -H / 2;      // world origin starts at screen centre
+let camTarget = null;
+
+const quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+const screenCam = new THREE.OrthographicCamera(0, W, H, 0, -10, 10);
+const worldCam = new THREE.OrthographicCamera(0, W, H, 0, -10, 10);
+const quadGeo = new THREE.PlaneGeometry(2, 2);
+
+function fsScene(mat) {
+  const s = new THREE.Scene();
+  const m = new THREE.Mesh(quadGeo, mat); m.frustumCulled = false; s.add(m);
+  return s;
+}
+function makeRT(w, h, type = THREE.HalfFloatType) {
+  return new THREE.WebGLRenderTarget(Math.max(1, w), Math.max(1, h), {
+    type, format: THREE.RGBAFormat, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: false,
+  });
+}
+function clearRT(rt) {
+  renderer.setRenderTarget(rt);
+  renderer.setClearColor(0x000000, 0);
+  renderer.clear(true, false, false);
+}
+const blankTex = new THREE.DataTexture(new Uint8Array(4), 1, 1);
+blankTex.needsUpdate = true;
+
+/* shared uniforms */
+const U = {
+  uStroke: { value: null }, uPaper: { value: null }, uColor: { value: new THREE.Vector3() },
+  uCam: { value: new THREE.Vector2() }, uScreenPx: { value: new THREE.Vector2() }, uScreenCss: { value: new THREE.Vector2() },
+  uDpr: { value: DPR }, uTile: { value: TS }, uPer: { value: PER },
+};
+
+const paperMat = new THREE.ShaderMaterial({ vertexShader: FS_VERT, fragmentShader: PAPER_FRAG, uniforms: { uPer: U.uPer } });
+const paperScene = fsScene(paperMat);
+
+const bakeMat = new THREE.ShaderMaterial({ vertexShader: FS_VERT, fragmentShader: BAKE_FRAG, uniforms: {
+  uBase: { value: null }, uOrigin: { value: new THREE.Vector2() },
+  uStroke: U.uStroke, uPaper: U.uPaper, uColor: U.uColor, uCam: U.uCam, uScreenCss: U.uScreenCss, uTile: U.uTile, uPer: U.uPer,
+} });
+const bakeScene = fsScene(bakeMat);
+
+function makeDisplayMat(baseTex, origin, vert = WORLD_VERT) {
+  return new THREE.ShaderMaterial({
+    vertexShader: vert, fragmentShader: DISPLAY_FRAG, depthTest: false, depthWrite: false,
+    uniforms: {
+      uBase: { value: baseTex }, uOrigin: { value: origin },
+      uStroke: U.uStroke, uPaper: U.uPaper, uColor: U.uColor, uCam: U.uCam, uScreenPx: U.uScreenPx,
+      uDpr: U.uDpr, uTile: U.uTile, uPer: U.uPer,
+    },
+  });
+}
+// background: endless paper (no pigment) drawn full-screen
+const bgScene = fsScene(makeDisplayMat(blankTex, new THREE.Vector2(-1e7, -1e7), FS_VERT));
+
+const copyMat = new THREE.ShaderMaterial({ vertexShader: WORLD_VERT, fragmentShader: COPY_FRAG, depthTest: false, depthWrite: false,
+  uniforms: { uSrc: { value: null } } });
+const copyScene = new THREE.Scene();
+const copyQuad = new THREE.Mesh(new THREE.PlaneGeometry(TS, TS), copyMat);
+copyQuad.frustumCulled = false;
+copyScene.add(copyQuad);
+
+const maskMat = new THREE.ShaderMaterial({ vertexShader: FS_VERT, fragmentShader: MASK_FRAG, uniforms: { uSrc: { value: null } } });
+const maskScene = fsScene(maskMat);
+const maskRT = makeRT(64, 64, THREE.UnsignedByteType);
+const maskBuf = new Uint8Array(64 * 64 * 4);
+
+const stampMat = new THREE.ShaderMaterial({
+  vertexShader: WORLD_VERT, fragmentShader: STAMP_FRAG, depthTest: false, depthWrite: false,
+  blending: THREE.CustomBlending, blendEquation: THREE.MaxEquation, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor,
+  uniforms: {
+    uSeg: { value: Array.from({ length: MAX_SEG }, () => new THREE.Vector4()) },
+    uPress: { value: new Float32Array(MAX_SEG) }, uCount: { value: 0 },
+    uRadius: { value: 13 }, uSeed: { value: 0 }, uDpr: U.uDpr,
+  },
+});
+const stampScene = new THREE.Scene();
+const stampQuad = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), stampMat);
+stampQuad.frustumCulled = false;
+stampScene.add(stampQuad);
+
+let paperRT = null, strokeRT = null, scratchRT = null;
+const scene = new THREE.Scene();
+const monsters = [];
+
+/* ---------------- pigment tiles (endless sheet) ---------------- */
+const tiles = new Map();
+const tileGeo = new THREE.PlaneGeometry(TILE, TILE);
+function ensureTiles(x0, y0, x1, y1) {
+  for (let tx = Math.floor(x0 / TILE); tx <= Math.floor(x1 / TILE); tx++) {
+    for (let ty = Math.floor(y0 / TILE); ty <= Math.floor(y1 / TILE); ty++) {
+      const key = tx + ',' + ty;
+      if (tiles.has(key)) continue;
+      const rt = makeRT(Math.round(TS * DPR), Math.round(TS * DPR));
+      clearRT(rt);
+      const origin = new THREE.Vector2(tx * TILE - PAD, ty * TILE - PAD);   // padded area
+      const mat = makeDisplayMat(rt.texture, origin);
+      const mesh = new THREE.Mesh(tileGeo, mat);
+      mesh.position.set(tx * TILE + TILE / 2, ty * TILE + TILE / 2, 0);   // mesh covers only the core
+      mesh.renderOrder = -1000;
+      scene.add(mesh);
+      tiles.set(key, { tx, ty, rt, mat, mesh, origin });
+    }
+  }
+}
+function tilesIn(x0, y0, x1, y1) {
+  const out = [];
+  for (const t of tiles.values()) {
+    const ox = t.origin.x, oy = t.origin.y;
+    if (ox + TS >= x0 && ox <= x1 && oy + TS >= y0 && oy <= y1) out.push(t);
+  }
+  return out;
+}
+function clearTiles() {
+  for (const t of tiles.values()) { scene.remove(t.mesh); t.mat.dispose(); t.rt.dispose(); }
+  tiles.clear();
+}
+
+function setupTargets() {
+  const pw = Math.round(W * DPR), ph = Math.round(H * DPR);
+  if (!paperRT || paperRT.width !== Math.round(PER * DPR)) {
+    paperRT?.dispose();
+    paperRT = makeRT(Math.round(PER * DPR), Math.round(PER * DPR));
+    paperRT.texture.wrapS = paperRT.texture.wrapT = THREE.RepeatWrapping;
+    renderer.setRenderTarget(paperRT); renderer.render(paperScene, quadCam);
+    U.uPaper.value = paperRT.texture;
+  }
+  strokeRT?.dispose(); strokeRT = makeRT(pw, ph); clearRT(strokeRT);
+  U.uStroke.value = strokeRT.texture;
+  if (!scratchRT) { scratchRT = makeRT(Math.round(TS * DPR), Math.round(TS * DPR)); clearRT(scratchRT); }
+  U.uScreenPx.value.set(pw, ph);
+  U.uScreenCss.value.set(W, H);
+  U.uDpr.value = DPR;
+}
+
+function resize() {
+  if (drawing) endStroke();
+  const cx = camX + W / 2, cy = camY + H / 2;
+  W = innerWidth; H = innerHeight; DPR = Math.min(devicePixelRatio || 1, 2);
+  camX = cx - W / 2; camY = cy - H / 2;
+  renderer.setPixelRatio(DPR);
+  renderer.setSize(W, H, false);
+  screenCam.right = W; screenCam.top = H; screenCam.updateProjectionMatrix();
+  setupTargets();
+  applyCam();
+}
+
+/* ================================================================
+   Drawing state
+   ================================================================ */
+let current = 0;
+let radius = 13;
+const colors = CRAYONS.map((c) => hexToVec3(c.hex));
+let queue = [];
+let drawing = false;
+let activePointer = null;
+let strokeDirty = false;
+let strokeBox = null;
+let last = null;
+let strokeSeed = 0;
+let ink = null; // world bounds of un-lifted pigment
+let colorUse = CRAYONS.map(() => 0);
+const mouse = new THREE.Vector2(0, 0);
+
+const toScreen = (e) => ({ x: e.clientX, y: H - e.clientY });
+const toWorld = (e) => ({ x: camX + e.clientX, y: camY + H - e.clientY });
+
+const cursor = document.getElementById('cursor');
+const hint = document.getElementById('hint');
+const lifeBtn = document.getElementById('lifeBtn');
+const findBtn = document.getElementById('findBtn');
+
+function applyCam() {
+  worldCam.left = camX; worldCam.right = camX + W; worldCam.bottom = camY; worldCam.top = camY + H;
+  worldCam.updateProjectionMatrix();
+  U.uCam.value.set(camX, camY);
+}
+
+function extendInk(p) {
+  if (!ink) ink = { minX: p.x, minY: p.y, maxX: p.x, maxY: p.y };
+  else {
+    ink.minX = Math.min(ink.minX, p.x); ink.minY = Math.min(ink.minY, p.y);
+    ink.maxX = Math.max(ink.maxX, p.x); ink.maxY = Math.max(ink.maxY, p.y);
+  }
+  const pad = radius * 2;
+  ensureTiles(p.x - pad, p.y - pad, p.x + pad, p.y + pad);
+  if (!strokeBox) strokeBox = { minX: p.x, minY: p.y, maxX: p.x, maxY: p.y };
+  else {
+    strokeBox.minX = Math.min(strokeBox.minX, p.x); strokeBox.minY = Math.min(strokeBox.minY, p.y);
+    strokeBox.maxX = Math.max(strokeBox.maxX, p.x); strokeBox.maxY = Math.max(strokeBox.maxY, p.y);
+  }
+  lifeBtn.disabled = false;
+}
+
+function pressureOf(e) {
+  if (e.pointerType === 'pen' && e.pressure > 0) return 0.45 + e.pressure * 0.75;
+  return 1.0;
+}
+
+function flushStamps() {
+  if (!queue.length) return;
+  const u = stampMat.uniforms;
+  u.uRadius.value = radius;
+  u.uSeed.value = strokeSeed;
+  renderer.setRenderTarget(strokeRT);
+  while (queue.length) {
+    const batch = queue.splice(0, MAX_SEG);
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    batch.forEach((s, i) => {
+      u.uSeg.value[i].set(s.ax, s.ay, s.bx, s.by);
+      u.uPress.value[i] = s.p;
+      x0 = Math.min(x0, s.ax, s.bx); y0 = Math.min(y0, s.ay, s.by);
+      x1 = Math.max(x1, s.ax, s.bx); y1 = Math.max(y1, s.ay, s.by);
+    });
+    u.uCount.value = batch.length;
+    const pad = radius * 2 + 4;
+    stampQuad.position.set((x0 + x1) / 2, (y0 + y1) / 2, 0);
+    stampQuad.scale.set(x1 - x0 + pad * 2, y1 - y0 + pad * 2, 1);
+    renderer.render(stampScene, screenCam);
+  }
+  strokeDirty = true;
+}
+
+function bakeStroke() {
+  flushStamps();
+  if (!strokeDirty || !strokeBox) { strokeDirty = false; strokeBox = null; return; }
+  const pad = radius * 2 + 4;
+  U.uColor.value.copy(colors[current]);
+  for (const t of tilesIn(strokeBox.minX - pad, strokeBox.minY - pad, strokeBox.maxX + pad, strokeBox.maxY + pad)) {
+    bakeMat.uniforms.uBase.value = t.rt.texture;
+    bakeMat.uniforms.uOrigin.value.copy(t.origin);
+    renderer.setRenderTarget(scratchRT); renderer.render(bakeScene, quadCam);
+    const old = t.rt; t.rt = scratchRT; scratchRT = old;
+    t.mat.uniforms.uBase.value = t.rt.texture;
+  }
+  clearRT(strokeRT);
+  strokeDirty = false;
+  strokeBox = null;
+}
+
+function endStroke() {
+  if (!drawing) return;
+  drawing = false;
+  activePointer = null;
+  bakeStroke();
+}
+
+function clearPaper() {
+  if (drawing) endStroke();
+  bakeStroke();
+  clearTiles();
+  ink = null; colorUse = CRAYONS.map(() => 0);
+  lifeBtn.disabled = true;
+}
+
+/* ================================================================
+   Monsters
+   ================================================================ */
+let orderSeed = 0;
+
+class Ribbon {
+  constructor(maxPts, color, width, order, alphaRef) {
+    this.max = maxPts;
+    this.width = width;
+    const g = new THREE.BufferGeometry();
+    this.pos = new Float32Array(maxPts * 2 * 3);
+    this.uv = new Float32Array(maxPts * 2 * 2);
+    const idx = [];
+    for (let i = 0; i < maxPts - 1; i++) {
+      const a = i * 2;
+      idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+    }
+    g.setIndex(idx);
+    g.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
+    g.setAttribute('uv', new THREE.BufferAttribute(this.uv, 2));
+    this.mat = new THREE.ShaderMaterial({
+      vertexShader: WORLD_VERT, fragmentShader: LINE_FRAG, transparent: true, depthTest: false, depthWrite: false,
+      uniforms: {
+        uColor: { value: color.clone() }, uPaper: U.uPaper, uPer: U.uPer,
+        uSeed: { value: Math.random() }, uWidth: { value: width }, uAlpha: alphaRef,
+      },
+    });
+    this.mesh = new THREE.Mesh(g, this.mat);
+    this.mesh.frustumCulled = false;
+    this.mesh.renderOrder = order;
+    this.geo = g;
+  }
+  set(points) {
+    const n = Math.min(points.length, this.max);
+    if (n < 2) { this.mesh.visible = false; return; }
+    this.mesh.visible = true;
+    let cum = 0;
+    for (let i = 0; i < n; i++) {
+      const p = points[i];
+      const pa = points[Math.max(0, i - 1)], pb = points[Math.min(n - 1, i + 1)];
+      let tx = pb[0] - pa[0], ty = pb[1] - pa[1];
+      const tl = Math.hypot(tx, ty) || 1; tx /= tl; ty /= tl;
+      if (i > 0) cum += Math.hypot(p[0] - points[i - 1][0], p[1] - points[i - 1][1]);
+      const w = this.width * 0.5 * (i === n - 1 ? 0.8 : 1);
+      const nx = -ty * w, ny = tx * w;
+      this.pos.set([p[0] + nx, p[1] + ny, 0, p[0] - nx, p[1] - ny, 0], i * 6);
+      this.uv.set([cum, 1, cum, -1], i * 4);
+    }
+    this.geo.setDrawRange(0, (n - 1) * 6);
+    this.geo.attributes.position.needsUpdate = true;
+    this.geo.attributes.uv.needsUpdate = true;
+  }
+  dispose() { this.geo.dispose(); this.mat.dispose(); }
+}
+
+function quadBezier(a, c, b, steps, out) {
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps, u = 1 - t;
+    out.push([u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]]);
+  }
+  return out;
+}
+
+/* Read the drawn silhouette: proportions, fill, where the bottom / widest row / head are */
+function analyzeShape(tex) {
+  maskMat.uniforms.uSrc.value = tex;
+  renderer.setRenderTarget(maskRT); renderer.render(maskScene, quadCam);
+  renderer.readRenderTargetPixels(maskRT, 0, 0, 64, 64, maskBuf);
+  const N = 64;
+  const on = (x, y) => maskBuf[(y * N + x) * 4 + 3] > 50;
+  let sx = 0, sy = 0, c = 0, x0 = N, y0 = N, x1 = -1, y1 = -1;
+  const left = new Array(N).fill(-1), right = new Array(N).fill(-1);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (on(x, y)) {
+    sx += x; sy += y; c++;
+    x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+    if (left[y] < 0) left[y] = x;
+    right[y] = x;
+  }
+  if (c < 6) return null;
+  const n = (v) => v / (N - 1);
+  const col = (u) => clamp(Math.round(u * (N - 1)), 0, N - 1);
+  const hgt = y1 - y0;
+  let bL = N, bR = -1;
+  for (let y = y0; y <= y0 + Math.max(1, hgt * 0.18); y++) if (left[y] >= 0) { bL = Math.min(bL, left[y]); bR = Math.max(bR, right[y]); }
+  let wY = Math.round((y0 + y1) / 2), wSpan = -1;
+  for (let y = Math.round(y0 + hgt * 0.3); y <= Math.round(y0 + hgt * 0.78); y++) {
+    if (left[y] >= 0 && right[y] - left[y] > wSpan) { wSpan = right[y] - left[y]; wY = y; }
+  }
+  let px = 0, pc = 0;
+  for (let y = Math.round(y1 - Math.max(1, hgt * 0.1)); y <= y1; y++) for (let x = 0; x < N; x++) if (on(x, y)) { px += x; pc++; }
+  let jag = 0, jc = 0;
+  for (let y = y0 + 1; y <= y1; y++) if (left[y] >= 0 && left[y - 1] >= 0) { jag += Math.abs(left[y] - left[y - 1]) + Math.abs(right[y] - right[y - 1]); jc++; }
+  return {
+    cx: n(sx / c), cy: n(sy / c),
+    spanW: (x1 - x0 + 1) / N, spanH: (y1 - y0 + 1) / N,
+    fill: c / ((x1 - x0 + 1) * (y1 - y0 + 1)),
+    jag: jc ? jag / jc : 0,
+    bottomL: n(bL), bottomR: n(bR),
+    wideY: n(wY), wideL: n(left[wY] >= 0 ? left[wY] : x0), wideR: n(right[wY] >= 0 ? right[wY] : x1),
+    peakX: pc ? n(px / pc) : n(sx / c),
+    lowest: (u) => { const x = col(u); for (let y = 0; y < N; y++) if (on(x, y)) return n(y); return null; },
+    highest: (u) => { const x = col(u); for (let y = N - 1; y >= 0; y--) if (on(x, y)) return n(y); return null; },
+  };
+}
+
+// no spin / flip / trip: monsters never rotate around themselves
+const ACTIONS = ['walk', 'run', 'moonwalk', 'idle', 'dance', 'tantrum', 'jacks', 'wave', 'sit', 'wiggle'];
+const DUR = { walk: [2.5, 5], run: [1.6, 2.6], moonwalk: [2, 3], idle: [1, 2], dance: [2.5, 4], spin: [1.1, 1.1], flip: [1.05, 1.05],
+  tantrum: [1.6, 2.4], jacks: [2, 3], trip: [2.8, 2.8], wave: [1.6, 2.4], sit: [2.4, 3.6], wiggle: [1.6, 2.4], dizzy: [1.6, 1.6] };
+
+class Monster {
+  constructor(rt, bx, by, bw, bh, color, colorIdx) {
+    this.rt = rt; this.w = bw; this.h = bh; this.color = color;
+    this.order = (orderSeed++ % 60) * 10 + 10;
+    this.alpha = { value: 1 };
+    this.group = new THREE.Group();
+    this.x = bx + bw / 2; this.home = this.x;
+    this.ground = by;
+    this.age = 0; this.seed = Math.random() * 100;
+    this.dir = Math.random() < 0.5 ? -1 : 1;
+    this.phase = 0; this.walk = 0; this.vel = 0;
+    this.mode = 'idle'; this.mt = 0; this.dur = 0.4;
+    this.jumpY = 0; this.vy = 0; this.land = 0; this.blink = 2; this.dying = 0;
+    this.turnCD = 0; this.surprise = 0; this.bodyY = bh / 2;
+    this.armA = [0.5, 0.5]; this.feet = []; this.kneeS = []; this.limbA = new Array(6).fill(0); this.limbL = new Array(6).fill(0);
+
+    /* ---------- personality from the drawn shape ---------- */
+    const s = analyzeShape(rt.texture) || {
+      cx: .5, cy: .5, spanW: .9, spanH: .9, fill: .8, jag: 0, bottomL: .2, bottomR: .8, wideY: .5, wideL: .1, wideR: .9, peakX: .5,
+      lowest: () => .05, highest: () => .95,
+    };
+    const inkW = s.spanW * bw, inkH = s.spanH * bh;
+    const aspect = inkH / Math.max(1, inkW);
+    this.build = aspect > 1.3 ? 'tall' : aspect < 0.78 ? 'wide' : 'round';
+    this.spiky = s.fill < 0.48 || s.jag > 3.2;
+    const size = Math.sqrt(inkW * inkH);
+
+    const legK = { tall: 0.5, wide: 0.28, round: 0.38 }[this.build];
+    this.legLen = clamp(inkH * legK, 22, 140);
+    this.armLen = clamp(Math.min(inkW, inkH) * (this.spiky ? 0.55 : 0.45) * (this.build === 'tall' ? 1.15 : 1), 22, 75);
+    this.armRest = { tall: 0.25, wide: 0.95, round: 0.5 }[this.build] + (this.spiky ? 0.45 : 0);
+    this.limbW = clamp(size * 0.035, 3.5, 8) * (this.spiky ? 0.8 : 1);
+    this.speed = rand(34, 52) * clamp(150 / size, 0.6, 1.5) * (this.spiky ? 1.35 : 1) * (this.build === 'wide' ? 0.8 : 1);
+    this.gaitRate = { tall: 0.8, wide: 1.6, round: 1.1 }[this.build] * (this.spiky ? 1.3 : 1);
+    this.stride = this.legLen * { tall: 0.55, wide: 0.3, round: 0.42 }[this.build];
+    this.waddle = this.build === 'wide' ? 0.16 : 0.03;
+    this.bounce = this.build === 'round' ? 9 : this.spiky ? 6 : 4;
+    this.range = 360 + size * 1.5;
+
+    const w = { walk: 5, run: 1, moonwalk: 1, idle: 1.5, dance: 1.5, spin: 1, flip: 1, tantrum: 1, jacks: 1, trip: 1, wave: 1, sit: 1, wiggle: 1 };
+    const mul = (k, f) => { w[k] *= f; };
+    if (this.build === 'tall') { mul('jacks', 2.5); mul('wave', 2); mul('moonwalk', 2); mul('trip', 2); mul('flip', 0.5); mul('sit', 0.5); }
+    if (this.build === 'wide') { mul('sit', 2.5); mul('wiggle', 2.8); mul('spin', 1.5); mul('flip', 0.3); mul('jacks', 0.4); mul('run', 0.5); }
+    if (this.build === 'round') { mul('flip', 2.5); mul('dance', 2); mul('spin', 1.5); }
+    if (this.spiky) { mul('tantrum', 3); mul('run', 2.5); mul('idle', 0.4); mul('sit', 0.4); }
+    const mood = CRAYONS[colorIdx]?.mood;
+    if (mood === 'hot') mul('tantrum', 1.8);
+    if (mood === 'sunny') { mul('dance', 1.7); mul('jacks', 1.3); }
+    if (mood === 'calm') { mul('sit', 1.7); mul('idle', 1.4); }
+    if (mood === 'sporty') { mul('jacks', 1.6); mul('run', 1.5); }
+    if (mood === 'sweet') { mul('wave', 1.8); mul('dance', 1.3); }
+    if (mood === 'cool') mul('moonwalk', 2.2);
+    this.weights = w;
+
+    /* ---------- anatomy from the silhouette ---------- */
+    const L = (u, v) => [(u - 0.5) * bw, (v - 0.5) * bh];
+    const nLegs = this.build === 'wide' ? (inkW > 230 ? 4 : 3) : 2;
+    const span = Math.max(0.12, s.bottomR - s.bottomL);
+    this.hips = [];
+    for (let i = 0; i < nLegs; i++) {
+      const f = nLegs === 2 ? (i ? 0.75 : 0.25) : (i + 0.5) / nLegs;
+      const u = clamp(s.bottomL + span * f, 0.06, 0.94);
+      this.hips.push(L(u, Math.min(0.5, (s.lowest(u) ?? 0.05) + 0.06)));
+    }
+    this.hips.sort((a, b) => a[0] - b[0]);
+    const shV = this.build === 'tall' ? Math.max(s.wideY, 0.55) : s.wideY;
+    this.shoulders = [L(s.wideL + 0.05, shV), L(s.wideR - 0.05, shV)];
+    // crayon marks that already look like hands become the hands
+    // limbs are always added as pastel lines (drawn bumps stay part of the body)
+    this.drawnArms = [null, null];
+    this.drawnLegs = [];
+    // drawn legs carry the body, so it doesn't need lifting on extra legs
+    this.liftLen = this.drawnLegs.length ? 0 : this.legLen;
+    this.eyeR = clamp(Math.min(inkW, inkH) * 0.085, 9, 24);
+    const peak = s.highest(s.peakX) ?? 0.9;
+    this.eyeC = L(s.peakX, Math.max(s.cy, peak - (this.eyeR * 1.9) / bh));
+
+    /* ---------- meshes ---------- */
+    const geo = new THREE.PlaneGeometry(bw, bh, 40, 40);
+    this.bodyMat = new THREE.ShaderMaterial({
+      vertexShader: BODY_VERT, fragmentShader: BODY_FRAG, transparent: true, depthTest: false, depthWrite: false,
+      uniforms: {
+        uPig: { value: rt.texture }, uPaper: U.uPaper,
+        uTexel: { value: new THREE.Vector2(1 / rt.width, 1 / rt.height) },
+        uPapOff: { value: new THREE.Vector2(bx / PER, by / PER) }, uPapScale: { value: new THREE.Vector2(bw / PER, bh / PER) },
+        uSizeCss: { value: new THREE.Vector2(bw, bh) }, uSize: { value: new THREE.Vector2(bw, bh) },
+        uTime: { value: 0 }, uSquash: { value: 1 }, uLean: { value: 0 }, uWob: { value: 0 }, uBoil: { value: 0 },
+        uAlpha: this.alpha,
+        uLimb: { value: Array.from({ length: 6 }, () => new THREE.Vector4()) },
+        uLimbP: { value: Array.from({ length: 6 }, () => new THREE.Vector3()) },
+      },
+    });
+    // slots 0-1 arms, 2-5 legs
+    [...this.drawnArms, ...this.drawnLegs].forEach((d, k) => {
+      if (!d) return;
+      const slot = k < 2 ? k : k;
+      this.bodyMat.uniforms.uLimb.value[slot].set(d.px, d.py, d.dx, d.dy);
+      this.bodyMat.uniforms.uLimbP.value[slot].x = d.len;
+    });
+    this.body = new THREE.Mesh(geo, this.bodyMat);
+    this.body.renderOrder = this.order + 2;
+    this.body.frustumCulled = false;
+    this.group.add(this.body);
+
+    this.legs = this.drawnLegs.length ? [] : this.hips.map(() => new Ribbon(20, color, this.limbW, this.order + 1, this.alpha));
+    this.arms = [0, 1].map(() => new Ribbon(16, color, this.limbW * 0.9, this.order + 1, this.alpha));
+    // little three-finger hands
+    this.fingers = [0, 1].map(() => [0, 1, 2].map(() => new Ribbon(3, color, Math.max(2.5, this.limbW * 0.6), this.order + 1, this.alpha)));
+    const mouthCol = CRAYONS[colorIdx]?.name === 'black' ? new THREE.Vector3(0.96, 0.94, 0.9) : new THREE.Vector3(0.08, 0.07, 0.07);
+    this.mouth = new Ribbon(18, mouthCol, Math.max(3, this.limbW * 0.6), this.order + 3, this.alpha);
+    [...this.legs, ...this.arms, ...this.fingers.flat(), this.mouth].forEach((r) => this.group.add(r.mesh));
+
+    this.eyes = [0, 1].map(() => {
+      const m = new THREE.ShaderMaterial({
+        vertexShader: WORLD_VERT, fragmentShader: EYE_FRAG, transparent: true, depthTest: false, depthWrite: false,
+        uniforms: { uLook: { value: new THREE.Vector2() }, uOpen: { value: 1 }, uSeed: { value: Math.random() * 10 }, uAlpha: this.alpha, uHappy: { value: 0 } },
+      });
+      const e = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), m);
+      e.renderOrder = this.order + 3;
+      e.frustumCulled = false;
+      this.group.add(e);
+      return e;
+    });
+    scene.add(this.group);
+  }
+
+  get centerY() { return this.ground + this.jumpY + this.bodyY; }
+
+  deform(lx, ly, t, sq, lean, wob) {
+    const { h } = this;
+    const yn = ly / h + 0.5;
+    let y = (ly + h / 2) * sq - h / 2;
+    const x = lx * (1 + (1 - sq) * 0.8) + lean * yn * h * 0.25 + Math.sin(t * 5 + yn * 3) * wob * yn;
+    y += Math.sin(t * 4 + x * 0.03) * wob * 0.4;
+    return [x, y];
+  }
+
+  hit(p) {
+    return Math.abs(p.x - this.x) < this.w * 0.45 && Math.abs(p.y - this.centerY) < this.h * 0.45;
+  }
+
+  /* ---------- behaviour ---------- */
+  pickMode(force) {
+    let name = force;
+    if (!name) {
+      const tot = ACTIONS.reduce((s, a) => s + this.weights[a], 0);
+      let r = Math.random() * tot;
+      for (const a of ACTIONS) { if ((r -= this.weights[a]) <= 0) { name = a; break; } }
+      name = name || 'walk';
+      if (name === this.mode && name !== 'walk') name = 'walk';
+    }
+    this.mode = name; this.mt = 0; this.dur = rand(...DUR[name]);
+    if ((name === 'walk' || name === 'run' || name === 'moonwalk') && Math.random() < 0.35) this.dir *= -1;
+  }
+  endMode() {
+    const prev = this.mode;
+    if (prev === 'flip' || prev === 'trip') this.land = 1;
+    this.pickMode(prev === 'spin' ? 'dizzy' : null);
+  }
+  poke() {
+    if (this.age < 1.2 || this.mode === 'flip' || this.mode === 'trip') return;
+    if (Math.random() < 0.3 && this.jumpY <= 0.01) { this.vy = rand(430, 560); this.land = 0; return; }
+    const goofy = ['tantrum', 'dance', 'jacks', 'wiggle', 'wave'];
+    this.pickMode(goofy[Math.floor(Math.random() * goofy.length)]);
+  }
+  react() {
+    if (this.jumpY <= 0.01 && !['flip', 'trip', 'spin'].includes(this.mode)) { this.vy = 300; this.surprise = 0.7; }
+  }
+
+  box() {
+    const hw = this.w * 0.42;
+    return [this.x - hw, this.ground, this.x + hw, this.ground + this.liftLen + this.h];
+  }
+  /* keep personal space: push apart when touching, turn around before bumping */
+  avoid(others, dt) {
+    if (this.age < 1.2 || this.dying) return;
+    const a = this.box();
+    for (const o of others) {
+      if (o === this || o.dying || o.age < 0.5) continue;
+      const b = o.box();
+      const ox = Math.min(a[2], b[2]) - Math.max(a[0], b[0]);
+      const oy = Math.min(a[3], b[3]) - Math.max(a[1], b[1]);
+      if (oy <= 0 || ox < -70) continue;
+      const dx = this.x - o.x;
+      const sgn = dx === 0 ? (this.seed > o.seed ? 1 : -1) : Math.sign(dx);
+      if (ox > -14) {
+        const pen = ox + 14;
+        if (pen < oy) this.x += sgn * Math.min(pen, 140 * dt) * 0.5;
+        else this.ground += (Math.sign(this.ground - o.ground) || sgn) * Math.min(oy, 120 * dt) * 0.5;
+      }
+      const heading = Math.sign(this.dir * this.vel);
+      if (heading !== 0 && Math.sign(o.x - this.x) === heading && this.turnCD <= 0) {
+        this.dir *= -1; this.turnCD = 0.9;
+        if (Math.random() < 0.35) this.react();
+      }
+    }
+  }
+
+  /* pose for the current action */
+  pose(t, override) {
+    const m = override || this.mode;
+    const mt = this.mt, k = clamp(mt / this.dur, 0, 1);
+    const env = Math.min(1, mt * 4, Math.max(0, this.dur - mt) * 4);
+    const P = { move: 0, gait: 0, rate: 1, lean: 0, sq: 0, hop: 0, rot: 0, pivot: 'body', sx: 1, legs: 'walk', arms: 'rest',
+      eyes: 'track', open: null, happy: 0, mouth: 'smile', lift: 1, jack: 0, sit: 0, wob: 0 };
+    switch (m) {
+      case 'walk': P.move = 1; P.gait = 1; P.eyes = 'forward'; P.arms = 'swing'; break;
+      case 'run': P.move = 2.4; P.gait = 1; P.rate = 1.3; P.lean = 0.28; P.arms = 'flail'; P.mouth = 'o'; P.open = 1.15; P.eyes = 'forward'; break;
+      case 'moonwalk': P.move = -0.9; P.gait = 1; P.rate = -1; P.lean = -0.12; P.arms = 'up'; P.mouth = 'grin'; P.eyes = 'forward'; break;
+      case 'idle': break;
+      case 'dance': P.legs = 'dance'; P.arms = 'dance'; P.lean = Math.sin(t * 8) * 0.3 * env; P.hop = Math.abs(Math.sin(t * 8)) * 7 * env;
+        P.mouth = 'grin'; P.open = 0; P.happy = 1; break;
+      case 'wiggle': P.legs = 'dance'; P.arms = 'up'; P.lean = Math.sin(t * 16) * 0.28 * env; P.sq = -0.05 * env; P.mouth = 'grin'; P.open = 0; P.happy = 1; break;
+      case 'spin': P.sx = Math.cos(k * Math.PI * 4); P.hop = Math.sin(k * Math.PI) * 22; P.arms = 'up'; P.mouth = 'o'; break;
+      case 'dizzy': P.eyes = 'dizzy'; P.lean = Math.sin(t * 5) * 0.25; P.mouth = 'wobble'; P.arms = 'flop'; break;
+      case 'flip': {
+        const e = k < 0.15 ? 0 : Math.min(1, (k - 0.15) / 0.7);
+        P.hop = Math.sin(e * Math.PI) * (this.legLen * 1.2 + 40);
+        P.rot = this.dir * smooth(e) * Math.PI * 2;
+        P.legs = e > 0 && e < 1 ? 'dangle' : 'walk';
+        P.sq = k < 0.15 ? -0.22 * (k / 0.15) : 0;
+        P.arms = 'up'; P.mouth = 'o'; P.open = 1.15; break;
+      }
+      case 'tantrum': P.legs = 'stomp'; P.arms = 'flail'; P.lean = Math.sin(t * 14) * 0.1; P.mouth = 'zig'; P.open = 0.5; P.eyes = 'cross';
+        P.hop = Math.abs(Math.sin(t * 9)) * 3; P.wob = 3; break;
+      case 'jacks': { const o = (1 - Math.cos(mt * 9)) / 2; P.legs = 'jacks'; P.arms = 'jacks'; P.jack = o; P.hop = o * 12; P.mouth = 'grin'; break; }
+      case 'wave': P.arms = 'wave'; P.mouth = 'grin'; P.lean = Math.sin(t * 3) * 0.06; break;
+      case 'sit': { const s = Math.min(1, mt * 3, Math.max(0, this.dur - mt) * 3); P.legs = 'sit'; P.sit = s; P.lift = 1 - 0.7 * s; P.sq = -0.06 * s; break; }
+      case 'trip': {
+        P.pivot = 'ground';
+        let th = 0;
+        if (k < 0.18) { P.move = 1.8; P.gait = 1; P.rate = 1.4; P.arms = 'flail'; P.mouth = 'o'; }
+        else if (k < 0.3) { const e = (k - 0.18) / 0.12; th = e * e * 1.5; P.arms = 'up'; P.mouth = 'o'; P.open = 1.2; }
+        else if (k < 0.72) { th = 1.5 + Math.sin((k - 0.3) * 40) * 0.03; P.legs = 'stomp'; P.arms = 'flail'; P.eyes = 'dizzy'; P.mouth = 'wobble'; }
+        else if (k < 0.86) { const e = (k - 0.72) / 0.14; th = 1.5 * (1 - smooth(e)); P.hop = Math.sin(e * Math.PI) * 14; }
+        else { P.eyes = 'dizzy'; P.lean = Math.sin(t * 6) * 0.15; }
+        P.rot = -this.dir * th; break;
+      }
+    }
+    return P;
+  }
+
+  update(dt, t, others) {
+    this.age += dt;
+    const grow = this.age < 0.25 ? 0 : easeOutBack(clamp((this.age - 0.25) / 1.1, 0, 1));
+    const boil = clamp(this.age / 0.6, 0, 1);
+    const born = this.age > 1.6;
+    if (born) { this.mt += dt; if (this.mt >= this.dur) this.endMode(); }
+    this.turnCD -= dt;
+    this.surprise = Math.max(0, this.surprise - dt);
+    const air = this.jumpY > 0 || this.vy > 0;
+    const P = this.pose(t, born ? null : 'idle');
+
+    // locomotion
+    this.walk += ((air ? 0 : P.gait) - this.walk) * Math.min(1, dt * 5);
+    this.vel += ((air ? 0 : P.move) - this.vel) * Math.min(1, dt * 4);
+    this.avoid(others, dt);
+    this.x += this.dir * this.speed * this.vel * dt;
+    const off = this.x - this.home;
+    if (Math.abs(off) > this.range && Math.sign(off) === Math.sign(this.dir * this.vel)) this.dir *= -1;
+    this.phase += dt * this.speed * Math.abs(this.vel) * 0.12 * Math.abs(P.rate) * this.gaitRate;
+
+    if (air) {
+      this.vy -= 1500 * dt;
+      this.jumpY += this.vy * dt;
+      if (this.jumpY <= 0) { this.jumpY = 0; this.vy = 0; this.land = 1; }
+    }
+    this.land = Math.max(0, this.land - dt * 3.5);
+
+    const bob = Math.abs(Math.sin(this.phase)) * this.bounce * this.walk;
+    const sq = 1 - this.land * 0.2 + Math.sin(t * 2.3 + this.seed) * 0.025 + (air ? Math.min(0.12, this.vy * 0.0003) : 0)
+      - this.walk * Math.abs(Math.cos(this.phase)) * 0.035 + P.sq;
+    const lean = this.dir * 0.14 * this.walk * Math.sign(P.move || 1) + (air ? -this.dir * 0.05 : 0) + this.dir * P.lean
+      + Math.sin(this.phase) * this.waddle * this.walk;
+    const wob = (2.5 + this.walk * 2 + this.land * 9 + P.wob) * boil;
+
+    const lift = this.liftLen * grow * P.lift;
+    this.bodyY = lift + this.h / 2 + bob;
+
+    // whole-body transform (rotation about the body centre or the feet)
+    const rot = P.rot, c = Math.cos(rot), s = Math.sin(rot);
+    const pv = P.pivot === 'ground' ? 0 : this.bodyY;
+    const sx = Math.abs(P.sx) < 0.05 ? (P.sx < 0 ? -0.05 : 0.05) : P.sx;
+    this.group.rotation.z = rot;
+    this.group.scale.x = sx;
+    this.group.position.set(this.x + s * pv, this.ground + this.jumpY + P.hop + pv - c * pv, 0);
+
+    this.body.position.set(0, this.bodyY, 0);
+    const bu = this.bodyMat.uniforms;
+    const tt = t + this.seed;
+    bu.uTime.value = tt; bu.uSquash.value = sq; bu.uLean.value = lean; bu.uWob.value = wob; bu.uBoil.value = boil;
+    const D = (p) => { const d = this.deform(p[0], p[1], tt, sq, lean, wob); return [d[0], d[1] + this.bodyY]; };
+
+    const showLimbs = grow > 0.02;
+    const legT = air || P.legs === 'dangle' ? 'dangle' : P.legs;
+    const nL = this.legs.length;
+
+    // drawn legs: swing the pastel itself about the hip
+    this.drawnLegs.forEach((d, i) => {
+      const lp = this.bodyMat.uniforms.uLimbP.value[2 + i];
+      const side = d.px < 0 ? -1 : 1;
+      const ph = (i % 2) * Math.PI + Math.floor(i / 2) * 0.6;
+      let ang = 0, lft = 0;
+      switch (legT) {
+        case 'dangle': ang = Math.sin(t * 5 + i) * 0.15; break;
+        case 'stomp': lft = Math.max(0, Math.sin(t * 10 + ph)) * d.len * 0.18; break;
+        case 'jacks': ang = side * P.jack * 0.4; break;
+        case 'dance': ang = Math.sin(t * 6) * 0.18; lft = Math.max(0, Math.sin(t * 6 + ph)) * 5; break;
+        case 'sit': ang = this.dir * 0.7 * P.sit; break;
+        default: {
+          const cyc = this.phase + ph;
+          const fd = P.rate < 0 ? 1 : -1;
+          ang = fd * this.dir * Math.sin(cyc) * 0.32 * this.walk;
+          lft = Math.max(0, -Math.cos(cyc)) * d.len * 0.12 * this.walk;
+        }
+      }
+      const k = 2 + i, sm = Math.min(1, dt * 12);
+      this.limbA[k] += (ang * Math.min(1, grow) - this.limbA[k]) * sm;
+      this.limbL[k] += (lft - this.limbL[k]) * sm;
+      lp.y = this.limbA[k];
+      lp.z = this.limbL[k];
+    });
+
+    // legs
+    this.legs.forEach((leg, i) => {
+      if (!showLimbs) { leg.mesh.visible = false; return; }
+      const hx = this.hips[i][0];
+      const side = hx < 0 ? -1 : 1;
+      const hip = D(this.hips[i]);
+      const rest = Math.max(4, this.legLen * grow + this.hips[i][1] + this.h / 2);
+      const ph = (i % 2) * Math.PI + Math.floor(i / 2) * 0.6;
+      let foot, kneeSide = this.dir;
+      switch (legT) {
+        case 'dangle': foot = [hip[0] + side * 4, hip[1] - rest * 0.94]; break;
+        case 'stomp': foot = [hx * 1.05, Math.max(0, Math.sin(t * 10 + ph)) * this.legLen * 0.2]; break;
+        case 'jacks': foot = [hx + side * this.legLen * 0.4 * P.jack, 0]; kneeSide = side; break;
+        case 'dance': foot = [hx * 1.05 + Math.sin(t * 6) * 6, Math.max(0, Math.sin(t * 6 + ph)) * 8]; kneeSide = side; break;
+        case 'sit': foot = [hx + side * this.legLen * 0.3 * P.sit + this.dir * this.legLen * 0.45 * P.sit, 0]; break;
+        default: {
+          const cyc = this.phase + ph;
+          const stride = Math.min(18, this.stride) * this.walk;
+          const fd = P.rate < 0 ? this.dir : -this.dir;      // planted foot slides back (forward when moonwalking)
+          foot = [hx * 1.05 + fd * Math.sin(cyc) * stride + side * 2,
+            Math.max(0, -Math.cos(cyc)) * this.legLen * 0.15 * this.walk * grow];
+        }
+      }
+      // ease feet and knee direction so poses blend instead of snapping
+      const fs = this.feet[i] || (this.feet[i] = foot.slice());
+      const sm = Math.min(1, dt * 14);
+      fs[0] += (foot[0] - fs[0]) * sm; fs[1] += (foot[1] - fs[1]) * sm;
+      foot = fs.slice();
+      this.kneeS[i] = (this.kneeS[i] ?? kneeSide) + (kneeSide - (this.kneeS[i] ?? kneeSide)) * Math.min(1, dt * 6);
+      const dx = foot[0] - hip[0], dy = foot[1] - hip[1];
+      const d = Math.hypot(dx, dy) || 1;
+      const Lh = Math.max(d, rest + 2) / 2;
+      const bend = Math.sqrt(Math.max(0, Lh * Lh - (d / 2) * (d / 2)));
+      let px = -dy / d, py = dx / d;
+      if (px < 0) { px = -px; py = -py; }
+      const mid = [(hip[0] + foot[0]) / 2, (hip[1] + foot[1]) / 2];
+      const knee = [mid[0] + px * bend * this.kneeS[i], mid[1] + py * bend * this.kneeS[i]];
+      const ctrl = [knee[0] * 2 - mid[0], knee[1] * 2 - mid[1]];
+      const pts = quadBezier(hip, ctrl, foot, 14, []);
+      const toe = Math.max(7, this.limbW * 2.2) * Math.min(1, grow) * (nL > 2 ? 0.7 : 1);
+      const td = legT === 'jacks' ? side : this.dir;
+      pts.push([foot[0] + td * toe * 0.5, foot[1] + 0.5], [foot[0] + td * toe, foot[1] + 1.5]);
+      leg.set(pts);
+    });
+
+    // arms
+    const waveArm = mouse.x > this.x ? 1 : 0;
+    this.arms.forEach((arm, i) => {
+      if (!showLimbs) { arm.mesh.visible = false; this.fingers[i].forEach((f) => { f.mesh.visible = false; }); return; }
+      const side = i ? 1 : -1;
+      const sh = D(this.shoulders[i]);
+      const len = this.armLen * grow;
+      const at = air && this.mode !== 'flip' ? 'airflap' : P.arms;
+      let a, swing = 0;
+      switch (at) {
+        case 'airflap': a = 1.6 + Math.sin(t * 12 + i) * 0.15; break;
+        case 'up': a = 2.5 + Math.sin(t * 4 + i * 2) * 0.08; break;
+        case 'flail': a = 1.2 + Math.sin(t * 9 + i * Math.PI) * 0.6; break;
+        case 'wave': a = i === waveArm ? 2.4 + Math.sin(t * 9) * 0.35 : this.armRest; break;
+        case 'jacks': a = 0.35 + P.jack * 2.1; break;
+        case 'dance': a = 1.4 + Math.sin(t * 6 + i * Math.PI) * 0.7; break;
+        case 'flop': a = 0.15 + Math.sin(t * 3 + i) * 0.08; break;
+        case 'swing': a = this.armRest + Math.sin(t * 1.7 + this.seed + i * 2) * 0.08;
+          swing = Math.sin(this.phase + (i ? 0 : Math.PI)) * len * 0.2 * this.walk; break;
+        default: a = this.armRest + Math.sin(t * 1.7 + this.seed + i * 2) * 0.08;
+      }
+      // ease the arm angle so actions blend smoothly
+      this.armA[i] += (a - this.armA[i]) * Math.min(1, dt * 10);
+      a = this.armA[i];
+      if (this.drawnArms[i]) {
+        // bend the drawn arm instead of adding a pastel line
+        arm.mesh.visible = false;
+        const sw = Math.sin(this.phase + (i ? 0 : Math.PI)) * 0.2 * this.walk * (at === 'swing' ? 1 : 0);
+        const delta = clamp((a - this.armRest) * 0.5, -0.9, 0.9) + sw;
+        this.bodyMat.uniforms.uLimbP.value[i].y = side * delta * Math.min(1, grow);
+        return;
+      }
+      const hand = [sh[0] + side * Math.sin(a) * len + this.dir * swing, sh[1] - Math.cos(a) * len];
+      const mid = [(sh[0] + hand[0]) / 2, (sh[1] + hand[1]) / 2];
+      const ctrl = [mid[0] + side * len * 0.12, mid[1] + len * 0.05];
+      const pts = quadBezier(sh, ctrl, hand, 11, []);
+      arm.set(pts);
+      // fingers fan out along the forearm direction
+      const pv = pts[pts.length - 2];
+      let fx = hand[0] - pv[0], fy = hand[1] - pv[1];
+      const fl = Math.hypot(fx, fy) || 1; fx /= fl; fy /= fl;
+      const flen = Math.max(5, this.limbW * 1.6) * Math.min(1, grow);
+      this.fingers[i].forEach((f, j) => {
+        const ang = (j - 1) * 0.6 + Math.sin(t * 3 + i + j) * 0.05;
+        const c = Math.cos(ang), s = Math.sin(ang);
+        const dx = fx * c - fy * s, dy = fx * s + fy * c;
+        f.set([hand, [hand[0] + dx * flen * 0.55, hand[1] + dy * flen * 0.55], [hand[0] + dx * flen, hand[1] + dy * flen]]);
+      });
+    });
+
+    // face
+    const pop = clamp((this.age - 0.55) / 0.35, 0, 1);
+    const popS = pop > 0 ? easeOutBack(pop) : 0;
+    const ec = D(this.eyeC);
+    this.blink -= dt;
+    let blinkOpen = 1;
+    if (this.blink < 0) { blinkOpen = 0; if (this.blink < -0.13) this.blink = rand(1.8, 5); }
+    const surprised = this.surprise > 0 || air;
+    this.eyes.forEach((e, i) => {
+      const side = i ? 1 : -1;
+      const ex = ec[0] + side * this.eyeR * 0.98 + this.dir * this.walk * 3;
+      const ey = ec[1] + (i ? 1.5 : -1);
+      e.position.set(ex, ey, 0);
+      e.scale.setScalar(this.eyeR * popS * (i ? 1.06 : 1));
+      e.visible = popS > 0.01;
+      const look = e.material.uniforms.uLook.value;
+      switch (P.eyes) {
+        case 'forward': look.set(this.dir * 0.8, -0.1); break;
+        case 'dizzy': { const ang = t * 9 + i * Math.PI; look.set(Math.cos(ang) * 0.9, Math.sin(ang) * 0.9); break; }
+        case 'cross': look.set(-side * 0.9, -0.15); break;
+        default: {
+          const vx = mouse.x - (this.x + ex), vy = mouse.y - (this.ground + ey);
+          const vl = Math.hypot(vx, vy) || 1, kk = Math.min(1, vl / 160);
+          look.set((vx / vl) * kk, (vy / vl) * kk);
+        }
+      }
+      e.material.uniforms.uOpen.value = surprised ? 1.2 : (P.open ?? blinkOpen);
+      e.material.uniforms.uHappy.value = P.happy;
+    });
+
+    if (popS > 0.01) {
+      const mr = this.eyeR * 0.95 * popS;
+      const mc = [ec[0] + this.dir * this.walk * 3, ec[1] - this.eyeR * 1.55];
+      const type = surprised ? 'o' : P.mouth;
+      const pts = [];
+      if (type === 'o') {
+        const rx = mr * 0.38, ry = mr * (0.5 + Math.sin(t * 20) * 0.05);
+        for (let k = 0; k <= 16; k++) { const th = (k / 16) * Math.PI * 2; pts.push([mc[0] + Math.cos(th) * rx, mc[1] + Math.sin(th) * ry]); }
+      } else if (type === 'zig') {
+        for (let k = 0; k <= 8; k++) pts.push([mc[0] - mr + (k / 8) * 2 * mr, mc[1] + (k % 2 ? 1 : -1) * mr * 0.22 + Math.sin(t * 30 + k) * 1.2]);
+      } else if (type === 'wobble') {
+        for (let k = 0; k <= 12; k++) pts.push([mc[0] - mr + (k / 12) * 2 * mr, mc[1] + Math.sin(k * 1.3 + t * 8) * mr * 0.18]);
+      } else {
+        const g = type === 'grin', r = mr * (g ? 1.3 : 1), sp = g ? 0.35 : 0.55;
+        for (let k = 0; k <= 12; k++) {
+          const th = Math.PI + sp + (k / 12) * (Math.PI - sp * 2);
+          pts.push([mc[0] + Math.cos(th) * r, mc[1] + Math.sin(th) * r * 0.6 + r * 0.4]);
+        }
+      }
+      this.mouth.set(pts);
+    } else this.mouth.mesh.visible = false;
+
+    if (this.dying) {
+      this.dying += dt;
+      this.alpha.value = Math.max(0, 1 - this.dying / 0.6);
+      return this.dying < 0.6;
+    }
+    return true;
+  }
+
+  dispose() {
+    scene.remove(this.group);
+    this.body.geometry.dispose(); this.bodyMat.dispose();
+    [...this.legs, ...this.arms, ...this.fingers.flat(), this.mouth].forEach((r) => r.dispose());
+    this.eyes.forEach((e) => { e.geometry.dispose(); e.material.dispose(); });
+    this.rt.dispose();
+  }
+}
+
+function bringToLife() {
+  if (drawing) endStroke();
+  bakeStroke();
+  if (!ink) return;
+  const pad = radius * 1.5 + 4;
+  const bx = Math.floor(ink.minX - pad), by = Math.floor(ink.minY - pad);
+  const bw = Math.ceil(ink.maxX + pad) - bx, bh = Math.ceil(ink.maxY + pad) - by;
+  if (bw < 24 || bh < 24) return;
+  if (bw > 2400 || bh > 2400) { clearPaper(); return; }
+
+  // stitch the tiles under the drawing into one texture
+  const rt = makeRT(Math.round(bw * DPR), Math.round(bh * DPR));
+  clearRT(rt);
+  const cam = new THREE.OrthographicCamera(bx, bx + bw, by + bh, by, -10, 10);
+  renderer.setRenderTarget(rt);
+  for (const t of tilesIn(bx, by, bx + bw, by + bh)) {
+    copyMat.uniforms.uSrc.value = t.rt.texture;
+    copyQuad.position.set(t.origin.x + TS / 2, t.origin.y + TS / 2, 0);
+    renderer.render(copyScene, cam);
+  }
+
+  const dom = colorUse.indexOf(Math.max(...colorUse));
+  const limbCol = colors[dom].clone().multiplyScalar(0.92);
+  monsters.push(new Monster(rt, bx, by, bw, bh, limbCol, dom));
+  const alive = monsters.filter((m) => !m.dying);
+  if (alive.length > MAX_MONSTERS) alive[0].dying = 0.0001;
+  findBtn.disabled = false;
+
+  clearPaper();
+}
+
+/* ================================================================
+   Input
+   ================================================================ */
+function setCursor() {
+  cursor.style.width = cursor.style.height = radius * 2 + 'px';
+  cursor.style.borderColor = CRAYONS[current].hex;
+}
+
+/* panning */
+let spaceDown = false;
+let pan = null;               // { id, x, y }
+const touches = new Map();
+function panBy(dx, dy) {
+  if (drawing) endStroke();
+  camX -= dx; camY += dy;
+  camTarget = null;
+  hint.style.opacity = 0.25;
+}
+
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+canvas.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'touch') {
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touches.size >= 2) { if (drawing) endStroke(); pan = { id: 'touch' }; return; }
+  }
+  if (e.button === 1 || e.button === 2 || spaceDown) {
+    pan = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    document.body.classList.add('panning', 'dragging');
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* synthetic pointer */ }
+    return;
+  }
+  if (e.button !== 0) return;
+  const p = toWorld(e);
+  const hitM = [...monsters].reverse().find((m) => !m.dying && m.hit(p));
+  if (hitM) { hitM.poke(); return; }
+  if (drawing) endStroke();
+  drawing = true;
+  activePointer = e.pointerId;
+  try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* synthetic pointer */ }
+  strokeSeed = Math.random() * 100;
+  const sp = toScreen(e);
+  last = sp;
+  queue.push({ ax: sp.x, ay: sp.y, bx: sp.x, by: sp.y, p: pressureOf(e) });
+  extendInk(p);
+});
+
+canvas.addEventListener('pointermove', (e) => {
+  cursor.style.left = e.clientX + 'px';
+  cursor.style.top = e.clientY + 'px';
+  cursor.style.opacity = 0.55;
+  const w0 = toWorld(e);
+  mouse.set(w0.x, w0.y);
+
+  if (pan && pan.id === 'touch' && touches.has(e.pointerId)) {
+    const t = touches.get(e.pointerId);
+    panBy((e.clientX - t.x) / touches.size, (e.clientY - t.y) / touches.size);
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    return;
+  }
+  if (touches.has(e.pointerId)) touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pan && pan.id === e.pointerId) {
+    panBy(e.clientX - pan.x, e.clientY - pan.y);
+    pan.x = e.clientX; pan.y = e.clientY;
+    return;
+  }
+  if (!drawing || e.pointerId !== activePointer) return;
+  const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+  for (const ev of (evs.length ? evs : [e])) {
+    const sp = toScreen(ev);
+    const d = Math.hypot(sp.x - last.x, sp.y - last.y);
+    if (d < 1.2) continue;
+    queue.push({ ax: last.x, ay: last.y, bx: sp.x, by: sp.y, p: pressureOf(ev) });
+    colorUse[current] += d * radius;
+    last = sp;
+    extendInk(toWorld(ev));
+  }
+});
+const pointerEnd = (e) => {
+  touches.delete(e.pointerId);
+  if (pan && (pan.id === e.pointerId || (pan.id === 'touch' && touches.size < 2))) {
+    pan = null; document.body.classList.remove('dragging');
+    if (!spaceDown) document.body.classList.remove('panning');
+  }
+  if (e.pointerId === activePointer) endStroke();
+};
+['pointerup', 'pointercancel'].forEach((t) => canvas.addEventListener(t, pointerEnd));
+canvas.addEventListener('pointerleave', () => { cursor.style.opacity = 0; });
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const k = e.deltaMode === 1 ? 16 : 1;
+  if (e.shiftKey && !e.deltaX) panBy(-e.deltaY * k, 0);
+  else panBy(-e.deltaX * k, -e.deltaY * k);
+}, { passive: false });
+
+/* crayon tray: realistic oil-pastel sticks drawn as SVG */
+const TIPS = [
+  // worn slanted tips (body outline from bottom-left, over the tip, down the right)
+  { body: 'M5 170 V40 C5 30 8 20 14 14 C20 8 28 9 32 16 C35 21 35 27 35 32 V170 Z',
+    face: 'M5.5 38 C7 27 12 17 19 13 C25 10 31 12 34 19 C30 26 18 34 5.5 38 Z' },
+  { body: 'M5 170 V30 C5 22 9 15 16 12 C23 9 31 13 34 22 C35 26 35 34 35 44 V170 Z',
+    face: 'M6 31 C8 21 15 13 23 12 C29 12 33 18 34.5 28 C26 31 15 32 6 31 Z' },
+  { body: 'M5 170 V34 C5 24 10 14 20 11 C27 9 33 15 35 24 V170 Z',
+    face: 'M5.5 32 C8 21 14 13 21 11.5 C27 10.5 32 15 34.5 23 C25 28 14 31 5.5 32 Z' },
+];
+function darker(hex, k) {
+  const n = parseInt(hex.slice(1), 16);
+  const f = (v) => Math.round(v * k).toString(16).padStart(2, '0');
+  return '#' + f((n >> 16) & 255) + f((n >> 8) & 255) + f(n & 255);
+}
+function crayonSVG(c, i) {
+  const t = TIPS[i % TIPS.length];
+  const id = 'cr' + i;
+  const ink = c.name === 'black' ? '#3b3734' : darker(c.hex, 0.62);
+  const flip = i % 2 ? 'translate(40 0) scale(-1 1)' : '';
+  return `<svg viewBox="0 0 40 170" preserveAspectRatio="xMidYMax meet" aria-hidden="true" focusable="false">
+    <defs><clipPath id="${id}b"><path d="${t.body}"/></clipPath></defs>
+    <g transform="${flip}">
+      <path d="${t.body}" fill="${c.hex}" filter="url(#wax)"/>
+      <rect x="0" y="0" width="40" height="170" fill="url(#cyl)" clip-path="url(#${id}b)"/>
+      <path d="${t.face}" fill="${c.hex}" filter="url(#wax)"/>
+      <path d="${t.face}" fill="url(#face)"/>
+      <path d="${t.face}" fill="none" stroke="#000" stroke-opacity=".18" stroke-width=".6"/>
+      <path d="M8 46 C12 47 20 44 30 47" stroke="#000" stroke-opacity=".12" stroke-width=".8" fill="none"/>
+    </g>
+    <path d="M3.6 64 L6 61.5 L8.4 64.3 L11 61.8 L13.6 64.6 L16 62 L18.8 64.4 L21.4 61.6 L24 64.5 L26.6 62 L29.2 64.2 L31.8 61.7 L34.2 64.4 L36.4 62.4 V170 H3.6 Z" fill="#efe6d3" filter="url(#paperf)"/>
+    <rect x="3.6" y="62" width="32.8" height="108" fill="url(#ridges)"/>
+    <rect x="3.6" y="62" width="32.8" height="108" fill="url(#cyl)" opacity=".75"/>
+    <rect x="3.6" y="76" width="32.8" height="7" fill="${c.hex}" opacity=".95"/>
+    <rect x="3.6" y="84.5" width="32.8" height="1.1" fill="${ink}" opacity=".7"/>
+    <rect x="3.6" y="150" width="32.8" height="3" fill="${c.hex}" opacity=".85"/>
+    <rect x="3.6" y="76" width="32.8" height="80" fill="url(#cyl)" opacity=".35"/>
+    <text x="0" y="0" transform="translate(23.5 140) rotate(-90)" font-family="Inter, sans-serif" font-weight="500" font-size="8.5" fill="${ink}" letter-spacing=".3">${c.name}</text>
+    <text x="0" y="0" transform="translate(29 140) rotate(-90)" font-family="Inter, sans-serif" font-size="4" fill="${ink}" opacity=".6" letter-spacing=".6">OIL PASTEL · ${String(i + 1).padStart(2, '0')}</text>
+    <ellipse cx="${i % 2 ? 27 : 13}" cy="67" rx="6" ry="1.8" fill="${c.hex}" opacity=".35"/>
+    <ellipse cx="${i % 2 ? 12 : 26}" cy="98" rx="2.4" ry="5" fill="${c.hex}" opacity=".18"/>
+  </svg>`;
+}
+
+const box = document.getElementById('box');
+const crayonEls = CRAYONS.map((c, i) => {
+  const b = document.createElement('button');
+  b.className = 'crayon' + (i === current ? ' sel' : '');
+  b.style.setProperty('--c', c.hex);
+  b.style.setProperty('--r', c.r);
+  b.setAttribute('role', 'radio');
+  b.setAttribute('aria-checked', i === current);
+  b.setAttribute('aria-label', `${c.name} pastel (${i + 1})`);
+  b.innerHTML = crayonSVG(c, i);
+  b.addEventListener('click', () => selectCrayon(i));
+  box.insertBefore(b, box.querySelector('.label'));
+  return b;
+});
+const grit = `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="4"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 -1.3 1.25"/></filter><rect width="80" height="80" filter="url(#n)"/></svg>')}")`;
+document.documentElement.style.setProperty('--grit', grit);
+
+function selectCrayon(i) {
+  if (drawing) endStroke();
+  current = i;
+  crayonEls.forEach((el, k) => { el.classList.toggle('sel', k === i); el.setAttribute('aria-checked', k === i); });
+  setCursor();
+}
+
+let findIdx = 0;
+function findMonster() {
+  const alive = monsters.filter((m) => !m.dying);
+  if (!alive.length) return;
+  const m = alive[findIdx++ % alive.length];
+  camTarget = { x: m.x - W / 2, y: m.ground - H * 0.35, m };
+}
+
+document.querySelectorAll('.size').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('.size').forEach((o) => o.classList.toggle('sel', o === b));
+  radius = +b.dataset.r;
+  setCursor();
+}));
+document.getElementById('clearBtn').addEventListener('click', clearPaper);
+findBtn.addEventListener('click', findMonster);
+lifeBtn.addEventListener('click', bringToLife);
+addEventListener('keydown', (e) => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (!spaceDown) { spaceDown = true; if (drawing) endStroke(); document.body.classList.add('panning'); }
+    return;
+  }
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key >= '1' && e.key <= String(CRAYONS.length)) selectCrayon(+e.key - 1);
+  else if (e.key === 'Enter') bringToLife();
+  else if (e.key === 'c' || e.key === 'C') clearPaper();
+  else if (e.key === 'f' || e.key === 'F') findMonster();
+  else if (e.key === 'm' || e.key === 'M') music.toggle();
+  else if (e.key.startsWith('Arrow')) {
+    const st = 60;
+    panBy(e.key === 'ArrowLeft' ? st : e.key === 'ArrowRight' ? -st : 0, e.key === 'ArrowUp' ? st : e.key === 'ArrowDown' ? -st : 0);
+  }
+});
+addEventListener('keyup', (e) => {
+  if (e.code === 'Space') { spaceDown = false; if (!pan) document.body.classList.remove('panning'); }
+});
+addEventListener('resize', resize);
+
+/* ================================================================
+   Soft generative background music (Web Audio, no files)
+   ================================================================ */
+const music = (() => {
+  let ctx = null, master = null, bus = null, timer = null;
+  let on = true;
+  try { on = localStorage.getItem('aca-music') !== 'off'; } catch (_) { /* storage blocked */ }
+  const CHORDS = [            // Cmaj7, Am7, Fmaj7, G6  (midi)
+    [48, 55, 59, 64], [45, 52, 55, 60], [41, 48, 52, 57], [43, 50, 55, 59],
+  ];
+  const SCALE = [72, 74, 76, 79, 81, 84, 86, 88];   // C major pentatonic, upper register
+  const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  let chordIdx = 0, nextChord = 0, nextNote = 0;
+
+  function impulse(sec) {
+    const len = Math.floor(ctx.sampleRate * sec);
+    const buf = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6);
+    }
+    return buf;
+  }
+  function init() {
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    master = ctx.createGain(); master.gain.value = 0;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200; lp.Q.value = 0.3;
+    const verb = ctx.createConvolver(); verb.buffer = impulse(4.5);
+    const wet = ctx.createGain(); wet.gain.value = 0.55;
+    const dry = ctx.createGain(); dry.gain.value = 0.5;
+    bus = ctx.createGain();
+    bus.connect(dry); bus.connect(verb); verb.connect(wet);
+    dry.connect(lp); wet.connect(lp); lp.connect(master); master.connect(ctx.destination);
+  }
+  function pad(notes, t, dur) {
+    notes.forEach((m, k) => {
+      [-4, 4].forEach((det) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = k === 0 ? 'sine' : 'triangle';
+        o.frequency.value = hz(m); o.detune.value = det;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(k === 0 ? 0.05 : 0.022, t + 3);
+        g.gain.setValueAtTime(k === 0 ? 0.05 : 0.022, t + dur - 1);
+        g.gain.linearRampToValueAtTime(0, t + dur + 3);
+        o.connect(g); g.connect(bus);
+        o.start(t); o.stop(t + dur + 3.2);
+      });
+    });
+  }
+  function pluck(m, t) {
+    [[1, 0.06], [2, 0.012], [3.01, 0.004]].forEach(([mul, amp]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = hz(m) * mul;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(amp, t + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + (mul === 1 ? 2.8 : 1.2));
+      o.connect(g); g.connect(bus);
+      o.start(t); o.stop(t + 3);
+    });
+  }
+  function tick() {
+    const now = ctx.currentTime, ahead = now + 0.6;
+    if (nextChord < now) nextChord = now + 0.1;
+    while (nextChord < ahead) {
+      pad(CHORDS[chordIdx % CHORDS.length], nextChord, 8);
+      chordIdx++; nextChord += 8;
+    }
+    if (nextNote < now) nextNote = now + 0.3;
+    while (nextNote < ahead) {
+      if (Math.random() < 0.6) pluck(SCALE[Math.floor(Math.random() * SCALE.length)], nextNote);
+      nextNote += [1.2, 1.6, 2.4, 3.2][Math.floor(Math.random() * 4)];
+    }
+  }
+  function start() {
+    if (!ctx) init();
+    ctx.resume();
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setTargetAtTime(0.32, ctx.currentTime, 1.5);
+    if (!timer) { tick(); timer = setInterval(tick, 250); }
+  }
+  function stop() {
+    if (!ctx) return;
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setTargetAtTime(0, ctx.currentTime, 0.4);
+    clearInterval(timer); timer = null;
+    setTimeout(() => { if (!on && ctx.state === 'running') ctx.suspend(); }, 1500);
+  }
+  const btn = document.getElementById('musicBtn'), label = document.getElementById('musicLabel');
+  function render() { btn.setAttribute('aria-pressed', String(on)); label.textContent = on ? 'music on' : 'music off'; }
+  function toggle() {
+    on = !on;
+    try { localStorage.setItem('aca-music', on ? 'on' : 'off'); } catch (_) { /* storage blocked */ }
+    render();
+    on ? start() : stop();
+  }
+  btn.addEventListener('click', toggle);
+  // browsers only allow sound after a user gesture
+  const firstGesture = () => { if (on) start(); removeEventListener('pointerdown', firstGesture, true); removeEventListener('keydown', firstGesture, true); };
+  addEventListener('pointerdown', firstGesture, true);
+  addEventListener('keydown', firstGesture, true);
+  document.addEventListener('visibilitychange', () => {
+    if (!ctx) return;
+    if (document.hidden) ctx.suspend(); else if (on) ctx.resume();
+  });
+  render();
+  return { toggle, get on() { return on; }, get state() { return ctx ? ctx.state : 'idle'; } };
+})();
+
+/* ================================================================
+   Loop
+   ================================================================ */
+resize();
+setCursor();
+
+let prev = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - prev) / 1000);
+  prev = now;
+  const t = now / 1000;
+
+  if (camTarget) {
+    if (camTarget.m) {
+      if (camTarget.m.dying) camTarget.m = null;
+      else camTarget.x = camTarget.m.x - W / 2;
+    }
+    const k = Math.min(1, dt * 4);
+    camX += (camTarget.x - camX) * k; camY += (camTarget.y - camY) * k;
+    if (Math.hypot(camTarget.x - camX, camTarget.y - camY) < 0.5 && !camTarget.m) camTarget = null;
+  }
+  applyCam();
+  flushStamps();
+
+  for (let i = monsters.length - 1; i >= 0; i--) {
+    if (!monsters[i].update(dt, t, monsters)) { monsters[i].dispose(); monsters.splice(i, 1); }
+  }
+
+  U.uColor.value.copy(colors[current]);
+  renderer.setRenderTarget(null);
+  renderer.setClearColor(0xfdfcf9, 1);
+  renderer.clear();
+  renderer.render(bgScene, quadCam);
+  renderer.render(scene, worldCam);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// hook for automated checks
+window.__pastel = {
+  bringToLife, findMonster, panBy, music,
+  get monsters() { return monsters.map((m) => ({ build: m.build, spiky: m.spiky, legs: m.legs.length, mode: m.mode, x: Math.round(m.x), drawnArms: m.drawnArms.map(Boolean), drawnLegs: m.drawnLegs.length })); },
+  get tiles() { return tiles.size; },
+};
+</script>
+</body>
+</html>
